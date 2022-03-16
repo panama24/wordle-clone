@@ -7,10 +7,11 @@ export const BACKSPACE = 'Backspace';
 export const ENTER = 'Enter';
 
 export const eventActions = {
+  ADD_LETTER: 'ADD_LETTER',
   CONTINUE: 'CONTINUE',
   DELETE: 'DELETE',
   NONE: 'NONE',
-  SCORE_WORD: 'SCORE_WORD',
+  SCORE_LETTERS: 'SCORE_LETTERS',
   SUBMISSION_ERROR: 'SUBMISSION_ERROR',
   VALIDATE: 'VALIDATE',
 }; 
@@ -28,13 +29,14 @@ export function getEventKey(event: KeyboardEvent | MouseEvent): string {
   }
 }
 
-export function toEventActionType(key: string) {
+export function getEventActionType(key: string) {
   if (key === ENTER) {
     return eventActions.VALIDATE;
   } else if (key === BACKSPACE) {
     return eventActions.DELETE;
   } else if (/^[a-zA-Z]{1}$/.test(key)) {
-    return eventActions.CONTINUE;
+    return eventActions.ADD_LETTER
+    // return eventActions.CONTINUE;
   } else {
     return eventActions.NONE;
   }

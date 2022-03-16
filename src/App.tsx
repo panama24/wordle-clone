@@ -16,7 +16,7 @@ import {
   ENTER,
   eventActions,
   getEventKey,
-  toEventActionType,
+  getEventActionType,
 } from './helpers/events';
 import { usePrevious } from './hooks/usePrevious';
 import {
@@ -30,16 +30,6 @@ const WORD_URL = 'https://api.frontendeval.com/fake/word';
 // TODO: save previously SUBMITTED words in local storage
 // TODO: nav modal (clicking on stats), game modal (win or lose modal)
 
-/**
- * 
- * boardState: ['', '', '', '', '', '']
- * evaluations: [[-1,0,-1, 1,1], [], [], [], [], []]
- * gameStatus: 'IN_PROGRESS'
- * rowIndex: 0
- * lastCompletedTs: 
- * lastPlayedTs:
- */
-   
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [wordOfTheDay, setWordOfTheDay] = useState<string>('');
@@ -60,7 +50,9 @@ function App() {
     if (state.endState) return;
 
     const key = getEventKey(event);
-    const actionType = toEventActionType(key);
+    const actionType = getEventActionType(key);
+    console.log('actionType', actionType);
+     
     actionType === eventActions.VALIDATE
       ? asyncDispatch(wordOfTheDay, state, dispatch)
       : dispatch({
@@ -72,6 +64,25 @@ function App() {
     state,
     wordOfTheDay,
   ]);
+
+  // const handleEvent = useCallback((event: KeyboardEvent | MouseEvent) => {
+  //   event.preventDefault();
+
+  //   if (state.endState) return;
+
+  //   const key = getEventKey(event);
+  //   const actionType = getEventActionType(key);
+  //   actionType === eventActions.VALIDATE
+  //     ? asyncDispatch(wordOfTheDay, state, dispatch)
+  //     : dispatch({
+  //       type: actionType,
+  //       payload: key,
+  //     });
+  // }, [
+  //   dispatch,
+  //   state,
+  //   wordOfTheDay,
+  // ]);
 
   useEffect(() => {
     function handleKeydown(event: KeyboardEvent) {
@@ -112,8 +123,13 @@ function App() {
   }
 
   const {
+    activeRow,
     endState,
-    gameBoard,
+
+    board, 
+    boardState,
+    scores,
+    
     keyboard,
     submissionError,
     submittedWords,
@@ -124,7 +140,12 @@ function App() {
       <Container>
         <Toast error={submissionError} />
         <GameBoard
-          board={gameBoard}
+          activeRow={activeRow}
+
+          board={board}
+          boardState={boardState}
+          scores={scores}
+
           submissionError={submissionError}
           submittedWords={submittedWords}
         />

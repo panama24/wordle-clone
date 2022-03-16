@@ -6,7 +6,12 @@ import {
 } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { usePrevious } from '../hooks/usePrevious';
-import type { GameBoardType, Tile } from '../types';
+import type {
+  BoardState,
+  Board,
+  Scores,
+  Tile,
+} from '../types';
 
 const DELAY_MULTIPLIER = .2;
 
@@ -17,13 +22,21 @@ function calculateDelay(index: number): number {
 const initTilesRef: null[][] = [...Array(6)].map(_ => Array(5).fill(null));
 
 type Props = {
-  board: GameBoardType;
+  activeRow: number;
+
+  board: Board,
+  boardState: BoardState;
+  scores: Scores;
+
   submittedWords: string[];
   submissionError: string | null;
 }
-
+   
 function GameBoard({
+  activeRow,
   board,
+  boardState,
+  scores,
   submissionError,
   submittedWords,
 }: Props) {
@@ -53,23 +66,75 @@ function GameBoard({
     }
   }, [submittedWords, submissionError]);
 
+  console.log('BOARD', board);
+  console.log('BOARD_STATE', boardState);
+  console.log('numRows', board.length);
   return (
     <div style={{ display: 'inline-block' }}>
-      <Container rows={board.length} cols={board[0].length}>
+      <BoardContainer rows={board.length}>
         {board.map((row, rowIndex) => (
-          row.map((tile, colIndex) => (
-            <TileContainer
-              colIndex={colIndex}
-              key={`${rowIndex}-${colIndex}`}
-              ref={el => tilesRef.current[rowIndex][colIndex] = el}
-              tile={tile}
-            />
-          )))
-        )}
-      </Container>
+          <Row
+            key={rowIndex}
+            letters={boardState[rowIndex]}
+            row={row}
+            rowIndex={rowIndex}
+            score={scores[rowIndex]}
+          />
+        ))}
+      </BoardContainer>
     </div>
   );
 }
+
+type Letters = string;
+type Score = string[] | null;
+type RowProps = {
+  letters: Letters;
+  row: any;
+  rowIndex: number;
+  score: Score;
+}
+
+function Row({
+  letters, 
+  row,
+  rowIndex,
+  score,
+}: RowProps) {
+  return (
+    <StyledRow>
+      {row.map((_: any, colIndex: number) => {
+        return (
+          <StyledTile
+            key={`${rowIndex}-${colIndex}`}
+            letter={letters[colIndex]}
+            score={null}
+          />
+        )
+      })}
+    </StyledRow>
+  )
+}
+
+const StyledRow = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: 9px;
+`;
+
+const Letter = styled.div`
+  width: 64px;
+  height: 64px;
+  color: white;
+  font-size: 36px;
+  font-weight: bold;
+  text-transform: capitalize;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: grey;
+  border: 2px solid grey;
+`;
 
 type TileProps = {
   colIndex: number;
@@ -98,12 +163,13 @@ const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
         <StyledTile
           className={isActive ? 'active' : ''}
           score={null}
+          letter={''}
         >
           {char}
         </StyledTile>
       </FlippableFront>
       <FlippableBack>
-        <StyledTile score={score}>
+        <StyledTile score={score} letter={''}>
           {char}
         </StyledTile>
       </FlippableBack>
@@ -179,7 +245,10 @@ const pressAnimation = keyframes`
   100% { transform: scale(1); }
 `;
 
-const StyledTile = styled.div<{ score: number | null }>`
+const StyledTile = styled.div<{
+  letter: string,
+  score: number | null,
+}>`
   width: 64px;
   height: 64px;
   color: white;
@@ -191,6 +260,10 @@ const StyledTile = styled.div<{ score: number | null }>`
   align-items: center;
   background: ${({ score }) => toDisplayColor(score, true)};
   border: 2px solid ${({ score }) => toDisplayColor(score)};
+
+  &::before {
+    content: '${({ letter }) => letter}';
+  }
 
   &.active {
     border: 2px solid #565758;
@@ -205,14 +278,14 @@ function toDisplayColor(score: number | null, defaultToTransparent = false) {
   return defaultToTransparent ? 'transparent' : '#3a3a3c';
 }
 
-const Container = styled.div<{ cols: number, rows: number }>`
+const BoardContainer = styled.div<{ rows: number }>`
   background: #121213;
   display: grid;
   grid-template-rows: ${({ rows }) => `repeat(${rows}, 1fr)`};
-  grid-template-columns: ${({ cols }) => `repeat(${cols}, 1fr)`};
   grid-gap: 9px;
   padding: 5px;
   box-sizing: border-box;
 `;
 
+  // grid-template-columns: ${({ cols }) => `repeat(${cols}, 1fr)`};
 export default GameBoard;

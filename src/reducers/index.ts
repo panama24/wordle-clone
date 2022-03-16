@@ -9,6 +9,8 @@ import {
 import { eventActions } from '../helpers/events';
 import type {
   Action,
+  BoardState,
+  Scores,
   State,
 } from '../types';
 
@@ -20,11 +22,29 @@ const submissionErrors = {
   GENERIC: 'Something went wrong.',
 }
 
+const createBoard = () => [...Array(6)]
+  .map(_ => (
+    Array(5)
+      .fill(null)
+  ));
+
+const initBoardState = (): BoardState => [...Array(6).fill('')];
+const initScores = (): Scores => [...Array(6)]
+  .map(_ => (
+    Array(5)
+      .fill(null)
+  ));
+
 export const initialState: State = {
   activeCol: 0,
   activeRow: 0,
   endState: null,
   gameBoard: createGameBoard(),
+
+  board: createBoard(),
+  boardState: initBoardState(),
+  scores: initScores(),
+
   keyboard: createKeyboardRows(),
   submissionError: null,
   submittedWords: [],
@@ -36,58 +56,42 @@ export function reducer(state: State, action: Action): State {
   const {
     activeCol,
     activeRow,
+    board, 
+    boardState,
     gameBoard,
     keyboard,
     submittedWords,
     word,
   } = state;
 
-  const maxWordLength = gameBoard[0].length;
-  const maxSubmissionsLength = gameBoard.length;
+  const maxWordLength = board[0].length;
+  const maxSubmissionsLength = board.length;
+
   let nextGameBoard = [ ...gameBoard ];
-  let nextWord;
+  let currentWord;
 
   switch (action.type) {
-    case eventActions.CONTINUE:
-      nextWord = word + action.payload;
-      if (nextWord.length > maxWordLength) {
-        return state;
-      }
-
-      nextGameBoard[activeRow][activeCol] = {
-        char: action.payload,
-        score: null,
-      }
-
-      return {
-        ...state,
-        activeCol: activeCol + 1,
-        gameBoard: nextGameBoard,
-        word: nextWord,
-      }
     case eventActions.DELETE:
-      if (word === '') return state;
+      currentWord = boardState[activeRow];
 
-      nextWord = word.slice(0, word.length - 1);
-
-      nextGameBoard[activeRow][activeCol - 1] = {
-        char: null,
-        score: null,
-      }
+      if (currentWord === '') return state;
 
       return {
         ...state,
-        activeCol: activeCol - 1,
-        gameBoard: nextGameBoard,
-        word: nextWord,
+        boardState: [
+          ...boardState.slice(0, activeRow),
+          currentWord.slice(0, currentWord.length - 1),
+          ...boardState.slice(activeRow + 1),
+        ]
       }
     case eventActions.NONE:
     case eventActions.VALIDATE:
       return state;
-    case eventActions.SCORE_WORD: 
+    case eventActions.SCORE_LETTERS: 
 
       const wordOfTheDay = action.payload;
-      const submittedWord = word;
+      const submittedWord = boardState[activeRow];
+      // todo: use scores matrix
       const score = scoreWordByLetter(submittedWord, wordOfTheDay);
 
       // move into another function and write tests
@@ -132,11 +136,24 @@ export function reducer(state: State, action: Action): State {
         word: '',
       };
     case eventActions.SUBMISSION_ERROR:
-      console.log('reducer', action)
       return {
         ...state,
         submissionError: action.payload
       };
+    case eventActions.ADD_LETTER:
+      currentWord = boardState[activeRow];
+      currentWord += action.payload;
+
+      if (currentWord.length > maxWordLength) return state;
+
+      return {
+        ...state,
+        boardState: [
+          ...boardState.slice(0, activeRow),
+          currentWord,
+          ...boardState.slice(activeRow + 1),
+        ]
+      }
     default:
       throw new Error('No such action type.');
   }
@@ -147,9 +164,15 @@ export function asyncDispatch(
   state: State,
   dispatch: (action: Action) => any)
 {
-  const { gameBoard, word } = state;
+  const {
+    activeRow,
+    board,
+    boardState,
+  } = state;
 
-  if (word.length < gameBoard[0].length) {
+  const word = boardState[activeRow];
+
+  if (word.length < board[0].length) {
     let timerId = setTimeout(() => {
       dispatch({
         type: eventActions.SUBMISSION_ERROR,
@@ -189,7 +212,7 @@ async function validate(
   const result = await response.json();
   if (Array.isArray(result)) {
     dispatch({
-      type: eventActions.SCORE_WORD,
+      type: eventActions.SCORE_LETTERS,
       payload: wordOfTheDay
     });
   } else {
