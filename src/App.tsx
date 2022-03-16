@@ -28,9 +28,17 @@ import {
 const WORD_URL = 'https://api.frontendeval.com/fake/word';
 
 // TODO: save previously SUBMITTED words in local storage
-// TODO: keyboard submission result should animate after gameboard
 // TODO: nav modal (clicking on stats), game modal (win or lose modal)
-// TODO: not a word row animation
+
+/**
+ * 
+ * boardState: ['', '', '', '', '', '']
+ * evaluations: [[-1,0,-1, 1,1], [], [], [], [], []]
+ * gameStatus: 'IN_PROGRESS'
+ * rowIndex: 0
+ * lastCompletedTs: 
+ * lastPlayedTs:
+ */
    
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -95,7 +103,7 @@ function App() {
     if (isGameOver) {
       setTimeout(() => {
         setIsModalOpen(true);
-      }, 3000);
+      }, 1200);
     }
   }, [previousEndState, state.endState])
 
@@ -117,6 +125,7 @@ function App() {
         <Toast error={submissionError} />
         <GameBoard
           board={gameBoard}
+          submissionError={submissionError}
           submittedWords={submittedWords}
         />
         <Keyboard

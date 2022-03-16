@@ -132,6 +132,7 @@ export function reducer(state: State, action: Action): State {
         word: '',
       };
     case eventActions.SUBMISSION_ERROR:
+      console.log('reducer', action)
       return {
         ...state,
         submissionError: action.payload
