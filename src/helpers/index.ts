@@ -62,7 +62,7 @@ export function mapScores(letterMap: KeyboardType, scores: Map<string, number>) 
         : curr[key];
       return {
         ...acc,
-        [key]: value || null,
+        [key]: value!,
       };
     }, {} as Record<string, number | null>);
     

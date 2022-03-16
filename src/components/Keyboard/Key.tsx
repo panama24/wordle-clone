@@ -29,6 +29,7 @@ const StyledKey = styled.button<{ bg?: string }>`
   width: 42px;
   text-transform: uppercase;
   background: ${({ bg }) => bg};
+  transition: background .1s linear 1s};
 `;
 
 export default Key;

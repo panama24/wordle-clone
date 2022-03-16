@@ -8,7 +8,7 @@ import styled, { keyframes } from 'styled-components';
 import { usePrevious } from '../hooks/usePrevious';
 import type { GameBoardType, Tile } from '../types';
 
-const DELAY_MULTIPLIER = .5;
+const DELAY_MULTIPLIER = .2;
 
 function calculateDelay(index: number): number {
   return index * DELAY_MULTIPLIER;
@@ -19,12 +19,18 @@ const initTilesRef: null[][] = [...Array(6)].map(_ => Array(5).fill(null));
 type Props = {
   board: GameBoardType;
   submittedWords: string[];
+  submissionError: string | null;
 }
-function GameBoard({ board, submittedWords }: Props) {
+
+function GameBoard({
+  board,
+  submissionError,
+  submittedWords,
+}: Props) {
   const tilesRef = useRef<null[][] | HTMLDivElement[][]>(initTilesRef);
 
   useEffect(() => {
-    if (submittedWords.length) {
+    if (submittedWords.length > 0) {
       if (tilesRef.current) {
         const rowRefs = [...tilesRef.current[submittedWords.length-1]];
         for (const rowRef of rowRefs) {
@@ -33,6 +39,19 @@ function GameBoard({ board, submittedWords }: Props) {
       }
     }
   }, [submittedWords]);
+
+  useEffect(() => {
+    if (tilesRef.current) {
+      if (submissionError) {
+        const refs = submittedWords.length === 0
+          ? [...tilesRef.current[0]]
+          : [...tilesRef.current[submittedWords.length]];
+        for (const ref of refs) {
+          ref?.classList.toggle('shake');
+        }
+      }
+    }
+  }, [submittedWords, submissionError]);
 
   return (
     <div style={{ display: 'inline-block' }}>
@@ -45,8 +64,7 @@ function GameBoard({ board, submittedWords }: Props) {
               ref={el => tilesRef.current[rowIndex][colIndex] = el}
               tile={tile}
             />
-            )
-          ))
+          )))
         )}
       </Container>
     </div>
@@ -65,7 +83,9 @@ const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
 
   useEffect(() => {
     const showAsActive = !previousValue && !!tile.char;
-    showAsActive ? setIsActive(true) : setIsActive(false);
+    showAsActive
+      ? setIsActive(true)
+      : setIsActive(false);
   }, [previousValue, tile.char]);
 
   const { char, score } = tile;
@@ -91,24 +111,48 @@ const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
   )
 });
 
+const shakeAnimation = keyframes`
+  10%, 90% {
+    transform: translate3d(-1px, 0, 0);
+  }
+  
+  20%, 80% {
+    transform: translate3d(2px, 0, 0);
+  }
+
+  30%, 50%, 70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+
+  40%, 60% {
+    transform: translate3d(4px, 0, 0);
+  }
+`;
+
 const Flippable = styled.div<{ secs: number }>`
   position: relative;
   background: transparent;
   width: 64px;
   height: 64px;
   perspective: 1000px;
-  transition: ${({ secs }) => `all .4s linear ${calculateDelay(secs)}s`};
+  transition: ${({ secs }) => `all .3s ease-in-out ${calculateDelay(secs)}s`};
 
   &.flipped {
     & > div:first-of-type {
       transform: perspective(1000px) rotateX(-180deg);
-      transition: ${({ secs }) => `all .4s linear ${calculateDelay(secs)}s`};
+      transition: ${({ secs }) => `all .3s ease-in-out ${calculateDelay(secs)}s`};
     }
 
     & > div:last-of-type {
       transform: perspective(1000px) rotateX(0deg);
-      transition: ${({ secs }) => `all .4s linear ${calculateDelay(secs)}s`};
+      transition: ${({ secs }) => `all .3s ease-in-out ${calculateDelay(secs)}s`};
     }
+  }
+
+  &.shake {
+    animation: ${shakeAnimation} 0.6s cubic-bezier(.36,.07,.19,.97) both;
+    transform: translate3d(0, 0, 0);
+    backface-visibility: hidden;
   }
 `;
 
@@ -134,6 +178,7 @@ const pressAnimation = keyframes`
   50% { transform: scale(1.09); }
   100% { transform: scale(1); }
 `;
+
 const StyledTile = styled.div<{ score: number | null }>`
   width: 64px;
   height: 64px;
