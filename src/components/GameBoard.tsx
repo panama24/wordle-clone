@@ -7,10 +7,9 @@ import {
 import styled, { keyframes } from 'styled-components';
 import { usePrevious } from '../hooks/usePrevious';
 import type {
-  BoardState,
   Board,
+  BoardState,
   Scores,
-  Tile,
 } from '../types';
 
 const DELAY_MULTIPLIER = .2;
@@ -23,12 +22,9 @@ const initTilesRef: null[][] = [...Array(6)].map(_ => Array(5).fill(null));
 
 type Props = {
   activeRow: number;
-
   board: Board,
   boardState: BoardState;
   scores: Scores;
-
-  submittedWords: string[];
   submissionError: string | null;
 }
    
@@ -38,122 +34,89 @@ function GameBoard({
   boardState,
   scores,
   submissionError,
-  submittedWords,
 }: Props) {
   const tilesRef = useRef<null[][] | HTMLDivElement[][]>(initTilesRef);
 
   useEffect(() => {
-    if (submittedWords.length > 0) {
+    if (activeRow > 0) {
       if (tilesRef.current) {
-        const rowRefs = [...tilesRef.current[submittedWords.length-1]];
+        const rowRefs = [...tilesRef.current[activeRow - 1]];
         for (const rowRef of rowRefs) {
           rowRef?.classList.toggle('flipped');
         }
       }
     }
-  }, [submittedWords]);
+  }, [activeRow]);
 
+  // Todo: this should happen multiple times in a row
+  // maybe fire a specific action instead of relying on submission error
+  // which resets on a delay
   useEffect(() => {
     if (tilesRef.current) {
       if (submissionError) {
-        const refs = submittedWords.length === 0
+        const refs = activeRow === 0
           ? [...tilesRef.current[0]]
-          : [...tilesRef.current[submittedWords.length]];
+          : [...tilesRef.current[activeRow]];
         for (const ref of refs) {
           ref?.classList.toggle('shake');
         }
       }
     }
-  }, [submittedWords, submissionError]);
+  }, [activeRow, submissionError]);
 
-  console.log('BOARD', board);
-  console.log('BOARD_STATE', boardState);
-  console.log('numRows', board.length);
   return (
     <div style={{ display: 'inline-block' }}>
       <BoardContainer rows={board.length}>
         {board.map((row, rowIndex) => (
-          <Row
-            key={rowIndex}
-            letters={boardState[rowIndex]}
-            row={row}
-            rowIndex={rowIndex}
-            score={scores[rowIndex]}
-          />
+          <Row key={rowIndex}>
+            {row.map((tile, colIndex) => {
+              const rowScore = scores[rowIndex];
+              return (
+                <TileContainer
+                  colIndex={colIndex}
+                  key={`${rowIndex}-${colIndex}`}
+                  ref={el => tilesRef.current[rowIndex][colIndex] = el}
+                  letter={boardState[rowIndex][colIndex]}
+                  score={rowScore ? rowScore[colIndex] : null}
+                />
+              )
+            })}
+          </Row>
         ))}
       </BoardContainer>
     </div>
   );
 }
 
-type Letters = string;
-type Score = string[] | null;
-type RowProps = {
-  letters: Letters;
-  row: any;
-  rowIndex: number;
-  score: Score;
-}
-
-function Row({
-  letters, 
-  row,
-  rowIndex,
-  score,
-}: RowProps) {
-  return (
-    <StyledRow>
-      {row.map((_: any, colIndex: number) => {
-        return (
-          <StyledTile
-            key={`${rowIndex}-${colIndex}`}
-            letter={letters[colIndex]}
-            score={null}
-          />
-        )
-      })}
-    </StyledRow>
-  )
-}
-
-const StyledRow = styled.div`
+const Row = styled.div`
   display: grid;
   grid-template-columns: repeat(5, 1fr);
   grid-gap: 9px;
 `;
 
-const Letter = styled.div`
-  width: 64px;
-  height: 64px;
-  color: white;
-  font-size: 36px;
-  font-weight: bold;
-  text-transform: capitalize;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  background: grey;
-  border: 2px solid grey;
-`;
-
 type TileProps = {
   colIndex: number;
-  tile: Tile;
+  letter: string | null;
+  score: any;
 }
 
 const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
-  const { tile, colIndex } = props;
-  const [isActive, setIsActive] = useState<boolean>(false);
-  const previousValue = usePrevious(tile.char);
+  const {
+    colIndex,
+    letter,
+    score,
+  } = props;
 
+  const [isActive, setIsActive] = useState<boolean>(false);
+
+  const prevLetter = usePrevious(letter);
   useEffect(() => {
-    const showAsActive = !previousValue && !!tile.char;
-    showAsActive
+    const active = !prevLetter && !!letter;
+    active
       ? setIsActive(true)
       : setIsActive(false);
-  }, [previousValue, tile.char]);
+  }, [prevLetter, letter]);
 
-  const { char, score } = tile;
   return (
     <Flippable
       ref={ref}
@@ -165,12 +128,12 @@ const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
           score={null}
           letter={''}
         >
-          {char}
+          {letter}
         </StyledTile>
       </FlippableFront>
       <FlippableBack>
         <StyledTile score={score} letter={''}>
-          {char}
+          {letter}
         </StyledTile>
       </FlippableBack>
     </Flippable>
@@ -247,7 +210,7 @@ const pressAnimation = keyframes`
 
 const StyledTile = styled.div<{
   letter: string,
-  score: number | null,
+  score: string | null,
 }>`
   width: 64px;
   height: 64px;
@@ -271,10 +234,13 @@ const StyledTile = styled.div<{
   }
 `;
 
-function toDisplayColor(score: number | null, defaultToTransparent = false) {
-  if (score === 1) return '#6aaa64';
-  if (score === 0) return '#c9b458';
-  if (score === -1) return '#3a3a3c';
+function toDisplayColor(
+  score: string | null,
+  defaultToTransparent = false,
+) {
+  if (score === 'correct') return '#6aaa64';
+  if (score === 'present') return '#c9b458';
+  if (score === 'absent') return '#3a3a3c';
   return defaultToTransparent ? 'transparent' : '#3a3a3c';
 }
 
@@ -287,5 +253,4 @@ const BoardContainer = styled.div<{ rows: number }>`
   box-sizing: border-box;
 `;
 
-  // grid-template-columns: ${({ cols }) => `repeat(${cols}, 1fr)`};
 export default GameBoard;

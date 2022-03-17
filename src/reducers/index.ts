@@ -1,10 +1,8 @@
 import { Dispatch } from 'react';
 import {
-  createGameBoard,
   createKeyboardRows,
-  getEndState,
-  mapScores,
-  scoreWordByLetter,
+  mapKeyboardScores,
+  scoreLetters,
 } from '../helpers';
 import { eventActions } from '../helpers/events';
 import type {
@@ -22,7 +20,7 @@ const submissionErrors = {
   GENERIC: 'Something went wrong.',
 }
 
-const createBoard = () => [...Array(6)]
+const createBoard = (): null[][] => [...Array(6)]
   .map(_ => (
     Array(5)
       .fill(null)
@@ -38,36 +36,24 @@ const initScores = (): Scores => [...Array(6)]
 export const initialState: State = {
   activeCol: 0,
   activeRow: 0,
-  endState: null,
-  gameBoard: createGameBoard(),
-
   board: createBoard(),
   boardState: initBoardState(),
+  gameStatus: 'IN_PROGRESS',
   scores: initScores(),
-
   keyboard: createKeyboardRows(),
   submissionError: null,
-  submittedWords: [],
-  word: '',
 }
 
 // break into multiple reducers
 export function reducer(state: State, action: Action): State {
   const {
-    activeCol,
     activeRow,
     board, 
     boardState,
-    gameBoard,
+    scores,
     keyboard,
-    submittedWords,
-    word,
   } = state;
 
-  const maxWordLength = board[0].length;
-  const maxSubmissionsLength = board.length;
-
-  let nextGameBoard = [ ...gameBoard ];
   let currentWord;
 
   switch (action.type) {
@@ -88,52 +74,38 @@ export function reducer(state: State, action: Action): State {
     case eventActions.VALIDATE:
       return state;
     case eventActions.SCORE_LETTERS: 
-
       const wordOfTheDay = action.payload;
       const submittedWord = boardState[activeRow];
-      // todo: use scores matrix
-      const score = scoreWordByLetter(submittedWord, wordOfTheDay);
 
-      // move into another function and write tests
-      const scoreMap = new Map();
-      for (const i in score) {
-        const letter = submittedWord[i];
-        if (scoreMap.has(letter)) {
-          if (score[i] > scoreMap.get(letter)) {
-            scoreMap.set(letter, score[i]);
-          }
-        } else {
-          scoreMap.set(letter, score[i]);
-        }
-
-        nextGameBoard[activeRow][i] = {
-          ...nextGameBoard[activeRow][i],
-          score: score[i],
-        };
-      }
-
-      const nextKeyboard = mapScores(keyboard, scoreMap);
-      // TODO: calculate all stats
-      const nextEndState = getEndState(
+      const score = scoreLetters(submittedWord, wordOfTheDay);
+      const nextScores =  [
+        ...scores.slice(0, activeRow),
         score,
-        submittedWords.length + 1,
-        maxSubmissionsLength,
-        maxWordLength,
-        wordOfTheDay
+        ...scores.slice(activeRow + 1),
+      ] as Scores;
+
+      const nextKeyboard = mapKeyboardScores(
+        keyboard,
+        submittedWord,
+        score,
       );
+
+      // // TODO: calculate all stats
+      // move this out
+      let nextGameStatus = 'IN_PROGRESS';
+      if (score.every(letterScore => letterScore === 'correct')) {
+        nextGameStatus = 'WIN';
+      } else if (boardState[boardState.length - 1] !== '') {
+        nextGameStatus = 'LOSE';
+      }
 
       return {
         ...state,
         activeCol: 0,
         activeRow: activeRow + 1,
-        endState: nextEndState,
-        gameBoard: nextGameBoard,
+        gameStatus: nextGameStatus,
         keyboard: nextKeyboard,
-        submittedWords: [
-          ...submittedWords,
-          submittedWord,
-        ],
-        word: '',
+        scores: nextScores,
       };
     case eventActions.SUBMISSION_ERROR:
       return {
@@ -144,7 +116,7 @@ export function reducer(state: State, action: Action): State {
       currentWord = boardState[activeRow];
       currentWord += action.payload;
 
-      if (currentWord.length > maxWordLength) return state;
+      if (currentWord.length > board[0].length) return state;
 
       return {
         ...state,

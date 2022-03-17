@@ -17,13 +17,13 @@ export default function Keyboard({
       {keyboard.map((row, rowIndex) => (
         <div key={rowIndex} style={{ display: 'flex' }}>
           {row.map(keyboardKey => {
-            const char = Object.keys(keyboardKey)[0];
+            const key = Object.keys(keyboardKey)[0];
             return (
               <Key
-                bg={getBg(keyboardKey[char])}
-                data-key={char}
-                key={char}
-                label={char}
+                bg={getBg(keyboardKey[key])}
+                data-key={key}
+                key={key}
+                label={key}
                 onClick={onClick}
               />
             )
@@ -54,10 +54,10 @@ export default function Keyboard({
   )
 }
 
-const getBg = (score: number | null): string => {
-  if (score === 1) return '#6aaa64';
-  if (score === 0) return '#c9b458';
-  if (score === -1) return '#3a3a3c';
+const getBg = (score: string | null): string => {
+  if (score === 'correct') return '#6aaa64';
+  if (score === 'present') return '#c9b458';
+  if (score === 'absent') return '#3a3a3c';
   return '#818384';
 }
 
