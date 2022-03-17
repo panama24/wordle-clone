@@ -1,10 +1,11 @@
 import { Dispatch } from 'react';
 import {
   createKeyboardRows,
+  getGameStatus,
   mapKeyboardScores,
   scoreLetters,
 } from '../helpers';
-import { eventActions } from '../helpers/events';
+import { actions } from '../helpers/events';
 import type {
   Action,
   BoardState,
@@ -34,7 +35,6 @@ const initScores = (): Scores => [...Array(6)]
   ));
 
 export const initialState: State = {
-  activeCol: 0,
   activeRow: 0,
   board: createBoard(),
   boardState: initBoardState(),
@@ -42,24 +42,24 @@ export const initialState: State = {
   scores: initScores(),
   keyboard: createKeyboardRows(),
   submissionError: null,
+  wordOfTheDay: '',
 }
 
 // break into multiple reducers
-export function reducer(state: State, action: Action): State {
+export function reducer(state: State, action: Action): any {
   const {
     activeRow,
     board, 
     boardState,
     scores,
     keyboard,
+    wordOfTheDay,
   } = state;
 
-  let currentWord;
+  let currentWord = boardState[activeRow];
 
   switch (action.type) {
-    case eventActions.DELETE:
-      currentWord = boardState[activeRow];
-
+    case actions.DELETE:
       if (currentWord === '') return state;
 
       return {
@@ -70,14 +70,12 @@ export function reducer(state: State, action: Action): State {
           ...boardState.slice(activeRow + 1),
         ]
       }
-    case eventActions.NONE:
-    case eventActions.VALIDATE:
+    case actions.NONE:
       return state;
-    case eventActions.SCORE_LETTERS: 
-      const wordOfTheDay = action.payload;
+    case actions.SCORE_LETTERS: 
       const submittedWord = boardState[activeRow];
-
       const score = scoreLetters(submittedWord, wordOfTheDay);
+
       const nextScores =  [
         ...scores.slice(0, activeRow),
         score,
@@ -91,28 +89,19 @@ export function reducer(state: State, action: Action): State {
       );
 
       // // TODO: calculate all stats
-      // move this out
-      let nextGameStatus = 'IN_PROGRESS';
-      if (score.every(letterScore => letterScore === 'correct')) {
-        nextGameStatus = 'WIN';
-      } else if (boardState[boardState.length - 1] !== '') {
-        nextGameStatus = 'LOSE';
-      }
-
       return {
         ...state,
-        activeCol: 0,
         activeRow: activeRow + 1,
-        gameStatus: nextGameStatus,
+        gameStatus: getGameStatus(boardState, score),
         keyboard: nextKeyboard,
         scores: nextScores,
       };
-    case eventActions.SUBMISSION_ERROR:
+    case actions.SUBMISSION_ERROR:
       return {
         ...state,
         submissionError: action.payload
       };
-    case eventActions.ADD_LETTER:
+    case actions.ADD_LETTER:
       currentWord = boardState[activeRow];
       currentWord += action.payload;
 
@@ -126,13 +115,17 @@ export function reducer(state: State, action: Action): State {
           ...boardState.slice(activeRow + 1),
         ]
       }
+    case actions.SET_DAILY_WORD:
+      return {
+        ...state,
+        wordOfTheDay: action.payload,
+      }
     default:
       throw new Error('No such action type.');
   }
 }
 
 export function asyncDispatch(
-  wordOfTheDay: string,
   state: State,
   dispatch: (action: Action) => any)
 {
@@ -145,30 +138,30 @@ export function asyncDispatch(
   const word = boardState[activeRow];
 
   if (word.length < board[0].length) {
-    let timerId = setTimeout(() => {
+    setTimeout(() => {
       dispatch({
-        type: eventActions.SUBMISSION_ERROR,
+        type: actions.SUBMISSION_ERROR,
         payload: '',
       });
     }, 2000);
 
     dispatch({
-      type: eventActions.SUBMISSION_ERROR,
+      type: actions.SUBMISSION_ERROR,
       payload: submissionErrors.MIN_LENGTH,
     });
   } else {
     try {
-      validate(wordOfTheDay, word, dispatch);
+      validate(BASE_VALIDATE_WORD_URL + word, dispatch);
     } catch (error) {
-      let timerId = setTimeout(() => {
+      setTimeout(() => {
         dispatch({
-          type: eventActions.SUBMISSION_ERROR,
+          type: actions.SUBMISSION_ERROR,
           payload: '',
         });
       }, 2000);
 
       dispatch({
-        type: eventActions.SUBMISSION_ERROR,
+        type: actions.SUBMISSION_ERROR,
         payload: submissionErrors.GENERIC,
       })
     }
@@ -176,27 +169,23 @@ export function asyncDispatch(
 };
 
 async function validate(
-  wordOfTheDay: string,
-  word: string,
+  url: string,
   dispatch: Dispatch<Action>
 ) {
-  const response = await fetch(BASE_VALIDATE_WORD_URL + word);
+  const response = await fetch(url);
   const result = await response.json();
   if (Array.isArray(result)) {
-    dispatch({
-      type: eventActions.SCORE_LETTERS,
-      payload: wordOfTheDay
-    });
+    dispatch({ type: actions.SCORE_LETTERS });
   } else {
-    let timerId = setTimeout(() => {
+    setTimeout(() => {
       dispatch({
-        type: eventActions.SUBMISSION_ERROR,
+        type: actions.SUBMISSION_ERROR,
         payload: '',
       });
     }, 2000);
 
     dispatch({
-      type: eventActions.SUBMISSION_ERROR,
+      type: actions.SUBMISSION_ERROR,
       payload: submissionErrors.INVALID_WORD,
     });
   }

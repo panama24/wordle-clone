@@ -1,7 +1,8 @@
 import { useEffect, useRef  } from "react";
 
-export function usePrevious(previous: string | null) {
-  const ref = useRef<null | string>(null);
+type Ref = string | number | null;
+export function usePrevious(previous: Ref) {
+  const ref = useRef<Ref>(previous);
 
   useEffect(() => {
     if (ref.current) {

@@ -16,10 +16,47 @@ function Modal(props: ModalProps) {
   )
 }
 
+const guessDistribution = {
+  1: 0,
+  2: 2,
+  3: 5,
+  4: 3,
+  5: 1,
+  6: 1,
+};
+
+const statistics = {
+  currentStreak: 1,
+  maxStreak: 7,
+  played: 13,
+  win: 97, // wins % games played
+};
+
+// local storage: wordle statistics
+/**
+ * avg guesses
+ * current streak
+ * games played
+ * games won
+ * guesses: { 1:1, 2:0, 3:0, 4:0, 5:0, 6:0, fail: 1 }
+ * max streak
+ * winPercentage
+ */
+
+// localStorage wordle state - last completed timestamp, last played timestamp
+
 function ModalContent({
   close,
   content,
 }: Omit<ModalProps, 'isOpen'>) {
+  const {
+    currentStreak,
+    maxStreak,
+    played,
+    win,
+   } = statistics;
+  const nextWordle = '13:52:39';
+
   return (
     <ContentContainer>
       <span onClick={close}>X</span>

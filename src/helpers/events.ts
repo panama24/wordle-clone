@@ -1,43 +1,44 @@
 import { MouseEvent } from 'react';
 
-const CLICK_EVENT = 'click';
-const KEYDOWN_EVENT = 'keydown';
-
 export const BACKSPACE = 'Backspace';
 export const ENTER = 'Enter';
+const DATA_KEY = 'data-key';
+const eventTypes = {
+  CLICK: 'click',
+  KEYDOWN: 'keydown',
+};
 
-export const eventActions = {
+export const actions = {
   ADD_LETTER: 'ADD_LETTER',
   CONTINUE: 'CONTINUE',
   DELETE: 'DELETE',
   NONE: 'NONE',
   SCORE_LETTERS: 'SCORE_LETTERS',
+  SET_DAILY_WORD: 'SET_DAILY_WORD',
   SUBMISSION_ERROR: 'SUBMISSION_ERROR',
-  VALIDATE: 'VALIDATE',
+  VALIDATE_ASYNC: 'VALIDATE_ASYNC',
 }; 
 
-export function getEventKey(event: KeyboardEvent | MouseEvent): string {
-  const eventType = event.type;
-  if (eventType === CLICK_EVENT) {
-    const dataKey = (event.target as HTMLDivElement).getAttribute('data-key');
-    if (dataKey === null) return 'Please add data-key attribute.'
+export function toEventKey(event: KeyboardEvent | MouseEvent): string {
+  if (event.type === eventTypes.CLICK) {
+    const dataKey = (event.target as HTMLDivElement).getAttribute(DATA_KEY);
+    if (!dataKey) {
+      return 'No data-key attribute found.';
+    }
     return dataKey;
-  } else if (eventType === KEYDOWN_EVENT) {
+  } else if (event.type === eventTypes.KEYDOWN) {
     return (event as KeyboardEvent).key;
-  } else {
-    return 'Unknown event type';
   }
+  return 'Unknown event type.';
 }
 
-export function getEventActionType(key: string) {
+export function toEventActionType(key: string) {
   if (key === ENTER) {
-    return eventActions.VALIDATE;
+    return actions.VALIDATE_ASYNC;
   } else if (key === BACKSPACE) {
-    return eventActions.DELETE;
+    return actions.DELETE;
   } else if (/^[a-zA-Z]{1}$/.test(key)) {
-    return eventActions.ADD_LETTER
-    // return eventActions.CONTINUE;
-  } else {
-    return eventActions.NONE;
+    return actions.ADD_LETTER
   }
+  return actions.NONE;
 }

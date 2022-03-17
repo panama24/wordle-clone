@@ -1,7 +1,14 @@
 import type {
+  BoardState,
   KeyboardType,
   Tile,
 } from '../types';
+
+const gameStatus = {
+  IN_PROGRESS: 'IN_PROGRESS',
+  LOSE: 'LOSE',
+  WIN: 'WIN',
+};
 
 export function mapLettersToIndex(word: string): Map<string, string> {
   const map = new Map();
@@ -146,6 +153,23 @@ export function createGameBoard(): Tile[][] {
 
 export function isAlphabetChar(str: string): boolean {
   return /^[a-zA-Z]{1}$/.test(str);
+}
+
+function correct(val: string) {
+  return val === 'correct';
+}
+
+export function getGameStatus(
+  boardState: BoardState,
+  score: string[],
+) {
+  let status = gameStatus.IN_PROGRESS;
+  if (score.every(correct)) {
+    status = gameStatus.WIN;
+  } else if (boardState[boardState.length - 1]) {
+    status = gameStatus.LOSE;
+  }
+  return status;
 }
 
 export function getEndState(

@@ -2,7 +2,6 @@ import {
   MouseEvent,
   useCallback,
   useEffect,
-  useReducer,
   useState,
 } from 'react';
 import styled from 'styled-components';
@@ -14,44 +13,43 @@ import { isAlphabetChar } from './helpers';
 import {
   BACKSPACE,
   ENTER,
-  eventActions,
-  getEventKey,
-  getEventActionType,
+  actions,
+  toEventActionType,
+  toEventKey,
 } from './helpers/events';
-import {
-  asyncDispatch,
-  initialState,
-  reducer,
-} from './reducers';
+import { usePersistReducer } from './hooks/usePersistReducer';
+import { asyncDispatch } from './reducers';
 
 const WORD_URL = 'https://api.frontendeval.com/fake/word';
 
 // TODO: save previously SUBMITTED words in local storage
 // TODO: nav modal (clicking on stats), game modal (win or lose modal)
+// winning word animation and toast that says: splendid, fantastic or whew (guess on last try)
 
 function App() {
-  const [state, dispatch] = useReducer(reducer, initialState);
-  const [wordOfTheDay, setWordOfTheDay] = useState<string>('');
+  const [state, dispatch] = usePersistReducer();
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     async function fetchWord() {
       const response = await fetch(WORD_URL);
       const word = await response.text();
-      setWordOfTheDay(word);
+      dispatch({
+        type: actions.SET_DAILY_WORD,
+        payload: word,
+      })
     }
     fetchWord();
-  }, []);
+  }, [dispatch]);
 
   const handleEvent = useCallback((event: KeyboardEvent | MouseEvent) => {
     event.preventDefault();
 
     if (state.gameStatus === 'IN_PROGRESS') {
-      const key = getEventKey(event);
-      const actionType = getEventActionType(key);
-      
-      actionType === eventActions.VALIDATE
-        ? asyncDispatch(wordOfTheDay, state, dispatch)
+      const key = toEventKey(event);
+      const actionType = toEventActionType(key);
+      actionType === actions.VALIDATE_ASYNC
+        ? asyncDispatch(state, dispatch)
         : dispatch({
           type: actionType,
           payload: key,
@@ -60,7 +58,6 @@ function App() {
   }, [
     dispatch,
     state,
-    wordOfTheDay,
   ]);
 
   useEffect(() => {

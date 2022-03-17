@@ -1,6 +1,7 @@
 import styled from 'styled-components';
 
 export default function Toast({ error }: { error: string | null }) {
+  // todo: can toast dismiss itself?
   return (
     <Container>
       {error && (
