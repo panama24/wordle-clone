@@ -16,9 +16,8 @@ import {
   ENTER,
   eventActions,
   getEventKey,
-  toEventActionType,
+  getEventActionType,
 } from './helpers/events';
-import { usePrevious } from './hooks/usePrevious';
 import {
   asyncDispatch,
   initialState,
@@ -30,16 +29,6 @@ const WORD_URL = 'https://api.frontendeval.com/fake/word';
 // TODO: save previously SUBMITTED words in local storage
 // TODO: nav modal (clicking on stats), game modal (win or lose modal)
 
-/**
- * 
- * boardState: ['', '', '', '', '', '']
- * evaluations: [[-1,0,-1, 1,1], [], [], [], [], []]
- * gameStatus: 'IN_PROGRESS'
- * rowIndex: 0
- * lastCompletedTs: 
- * lastPlayedTs:
- */
-   
 function App() {
   const [state, dispatch] = useReducer(reducer, initialState);
   const [wordOfTheDay, setWordOfTheDay] = useState<string>('');
@@ -57,16 +46,17 @@ function App() {
   const handleEvent = useCallback((event: KeyboardEvent | MouseEvent) => {
     event.preventDefault();
 
-    if (state.endState) return;
-
-    const key = getEventKey(event);
-    const actionType = toEventActionType(key);
-    actionType === eventActions.VALIDATE
-      ? asyncDispatch(wordOfTheDay, state, dispatch)
-      : dispatch({
-        type: actionType,
-        payload: key,
-      });
+    if (state.gameStatus === 'IN_PROGRESS') {
+      const key = getEventKey(event);
+      const actionType = getEventActionType(key);
+      
+      actionType === eventActions.VALIDATE
+        ? asyncDispatch(wordOfTheDay, state, dispatch)
+        : dispatch({
+          type: actionType,
+          payload: key,
+        });
+    }
   }, [
     dispatch,
     state,
@@ -79,7 +69,7 @@ function App() {
         key,
         metaKey,
       } = event as KeyboardEvent;
-      // allow keyboard shortcuts - explicitly handle only single letters, enter or delete
+      // allow keyboard shortcuts
       if (!metaKey) {
         if (
           isAlphabetChar(key)
@@ -97,26 +87,27 @@ function App() {
       document.removeEventListener('keydown', handleKeydown);
   }, [handleEvent]);
 
-  const previousEndState = usePrevious(state.endState);
   useEffect(() => {
-    const isGameOver = !previousEndState && !!state.endState;
-    if (isGameOver) {
+    const { gameStatus } = state;
+    if (gameStatus === 'WIN' || gameStatus === 'LOSE') {
       setTimeout(() => {
         setIsModalOpen(true);
       }, 1200);
     }
-  }, [previousEndState, state.endState])
+  }, [state])
 
   function closeModal() {
     setIsModalOpen(false);
   }
 
   const {
-    endState,
-    gameBoard,
+    activeRow,
+    board, 
+    boardState,
+    gameStatus,
+    scores,
     keyboard,
     submissionError,
-    submittedWords,
   } = state;
 
   return (
@@ -124,9 +115,11 @@ function App() {
       <Container>
         <Toast error={submissionError} />
         <GameBoard
-          board={gameBoard}
+          activeRow={activeRow}
+          board={board}
+          boardState={boardState}
+          scores={scores}
           submissionError={submissionError}
-          submittedWords={submittedWords}
         />
         <Keyboard
           keyboard={keyboard}
@@ -134,7 +127,7 @@ function App() {
         />
       </Container>
       <Modal
-        content={endState}
+        content={gameStatus}
         isOpen={isModalOpen}
         close={closeModal}
       />

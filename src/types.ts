@@ -3,19 +3,21 @@ type Action = {
   payload: string;
 }
 
-type GameBoardType = Tile[][];
+export type Board = null[][];
+export type BoardState = string[];
+export type Scores = null[] | string[][];
 
-type KeyboardType = Record<string, number | null>[][];
+type KeyboardType = Record<string, string | null> [][];
 
 type State = {
   activeCol: number;
   activeRow: number;
-  endState: string | null,
-  gameBoard: GameBoardType;
+  board: any;
+  boardState: BoardState;
+  gameStatus: string;
+  scores: Scores;
   keyboard: KeyboardType;
   submissionError: string | null;
-  submittedWords: string[];
-  word: string;
 }
 
 type Tile = {
@@ -25,7 +27,6 @@ type Tile = {
 
 export {
   Action,
-  GameBoardType,
   KeyboardType,
   State,
   Tile

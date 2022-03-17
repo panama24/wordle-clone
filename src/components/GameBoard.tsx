@@ -6,7 +6,11 @@ import {
 } from 'react';
 import styled, { keyframes } from 'styled-components';
 import { usePrevious } from '../hooks/usePrevious';
-import type { GameBoardType, Tile } from '../types';
+import type {
+  Board,
+  BoardState,
+  Scores,
+} from '../types';
 
 const DELAY_MULTIPLIER = .2;
 
@@ -17,78 +21,102 @@ function calculateDelay(index: number): number {
 const initTilesRef: null[][] = [...Array(6)].map(_ => Array(5).fill(null));
 
 type Props = {
-  board: GameBoardType;
-  submittedWords: string[];
+  activeRow: number;
+  board: Board,
+  boardState: BoardState;
+  scores: Scores;
   submissionError: string | null;
 }
-
+   
 function GameBoard({
+  activeRow,
   board,
+  boardState,
+  scores,
   submissionError,
-  submittedWords,
 }: Props) {
   const tilesRef = useRef<null[][] | HTMLDivElement[][]>(initTilesRef);
 
   useEffect(() => {
-    if (submittedWords.length > 0) {
+    if (activeRow > 0) {
       if (tilesRef.current) {
-        const rowRefs = [...tilesRef.current[submittedWords.length-1]];
+        const rowRefs = [...tilesRef.current[activeRow - 1]];
         for (const rowRef of rowRefs) {
           rowRef?.classList.toggle('flipped');
         }
       }
     }
-  }, [submittedWords]);
+  }, [activeRow]);
 
+  // Todo: this should happen multiple times in a row
+  // maybe fire a specific action instead of relying on submission error
+  // which resets on a delay
   useEffect(() => {
     if (tilesRef.current) {
       if (submissionError) {
-        const refs = submittedWords.length === 0
+        const refs = activeRow === 0
           ? [...tilesRef.current[0]]
-          : [...tilesRef.current[submittedWords.length]];
+          : [...tilesRef.current[activeRow]];
         for (const ref of refs) {
           ref?.classList.toggle('shake');
         }
       }
     }
-  }, [submittedWords, submissionError]);
+  }, [activeRow, submissionError]);
 
   return (
     <div style={{ display: 'inline-block' }}>
-      <Container rows={board.length} cols={board[0].length}>
+      <BoardContainer rows={board.length}>
         {board.map((row, rowIndex) => (
-          row.map((tile, colIndex) => (
-            <TileContainer
-              colIndex={colIndex}
-              key={`${rowIndex}-${colIndex}`}
-              ref={el => tilesRef.current[rowIndex][colIndex] = el}
-              tile={tile}
-            />
-          )))
-        )}
-      </Container>
+          <Row key={rowIndex}>
+            {row.map((tile, colIndex) => {
+              const rowScore = scores[rowIndex];
+              return (
+                <TileContainer
+                  colIndex={colIndex}
+                  key={`${rowIndex}-${colIndex}`}
+                  ref={el => tilesRef.current[rowIndex][colIndex] = el}
+                  letter={boardState[rowIndex][colIndex]}
+                  score={rowScore ? rowScore[colIndex] : null}
+                />
+              )
+            })}
+          </Row>
+        ))}
+      </BoardContainer>
     </div>
   );
 }
 
+const Row = styled.div`
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  grid-gap: 9px;
+`;
+
 type TileProps = {
   colIndex: number;
-  tile: Tile;
+  letter: string | null;
+  score: any;
 }
 
 const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
-  const { tile, colIndex } = props;
-  const [isActive, setIsActive] = useState<boolean>(false);
-  const previousValue = usePrevious(tile.char);
+  const {
+    colIndex,
+    letter,
+    score,
+  } = props;
 
+  const [isActive, setIsActive] = useState<boolean>(false);
+
+  const prevLetter = usePrevious(letter);
   useEffect(() => {
-    const showAsActive = !previousValue && !!tile.char;
-    showAsActive
+    const active = !prevLetter && !!letter;
+    active
       ? setIsActive(true)
       : setIsActive(false);
-  }, [previousValue, tile.char]);
+  }, [prevLetter, letter]);
 
-  const { char, score } = tile;
   return (
     <Flippable
       ref={ref}
@@ -98,13 +126,14 @@ const TileContainer = forwardRef<HTMLDivElement, TileProps>((props, ref) => {
         <StyledTile
           className={isActive ? 'active' : ''}
           score={null}
+          letter={''}
         >
-          {char}
+          {letter}
         </StyledTile>
       </FlippableFront>
       <FlippableBack>
-        <StyledTile score={score}>
-          {char}
+        <StyledTile score={score} letter={''}>
+          {letter}
         </StyledTile>
       </FlippableBack>
     </Flippable>
@@ -179,7 +208,10 @@ const pressAnimation = keyframes`
   100% { transform: scale(1); }
 `;
 
-const StyledTile = styled.div<{ score: number | null }>`
+const StyledTile = styled.div<{
+  letter: string,
+  score: string | null,
+}>`
   width: 64px;
   height: 64px;
   color: white;
@@ -192,24 +224,30 @@ const StyledTile = styled.div<{ score: number | null }>`
   background: ${({ score }) => toDisplayColor(score, true)};
   border: 2px solid ${({ score }) => toDisplayColor(score)};
 
+  &::before {
+    content: '${({ letter }) => letter}';
+  }
+
   &.active {
     border: 2px solid #565758;
     animation: ${pressAnimation} .1s ease-in-out;
   }
 `;
 
-function toDisplayColor(score: number | null, defaultToTransparent = false) {
-  if (score === 1) return '#6aaa64';
-  if (score === 0) return '#c9b458';
-  if (score === -1) return '#3a3a3c';
+function toDisplayColor(
+  score: string | null,
+  defaultToTransparent = false,
+) {
+  if (score === 'correct') return '#6aaa64';
+  if (score === 'present') return '#c9b458';
+  if (score === 'absent') return '#3a3a3c';
   return defaultToTransparent ? 'transparent' : '#3a3a3c';
 }
 
-const Container = styled.div<{ cols: number, rows: number }>`
+const BoardContainer = styled.div<{ rows: number }>`
   background: #121213;
   display: grid;
   grid-template-rows: ${({ rows }) => `repeat(${rows}, 1fr)`};
-  grid-template-columns: ${({ cols }) => `repeat(${cols}, 1fr)`};
   grid-gap: 9px;
   padding: 5px;
   box-sizing: border-box;
