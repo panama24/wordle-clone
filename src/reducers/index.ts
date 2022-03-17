@@ -1,14 +1,16 @@
 import { Dispatch } from 'react';
 import {
+  createBoard,
   createKeyboardRows,
   getGameStatus,
+  initBoardState,
+  initScores,
   mapKeyboardScores,
   scoreLetters,
 } from '../helpers';
 import { actions } from '../helpers/events';
 import type {
   Action,
-  BoardState,
   Scores,
   State,
 } from '../types';
@@ -20,19 +22,6 @@ const submissionErrors = {
   INVALID_WORD: 'Not in word list.',
   GENERIC: 'Something went wrong.',
 }
-
-const createBoard = (): null[][] => [...Array(6)]
-  .map(_ => (
-    Array(5)
-      .fill(null)
-  ));
-
-const initBoardState = (): BoardState => [...Array(6).fill('')];
-const initScores = (): Scores => [...Array(6)]
-  .map(_ => (
-    Array(5)
-      .fill(null)
-  ));
 
 export const initialState: State = {
   activeRow: 0,

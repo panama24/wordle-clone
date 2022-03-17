@@ -69,7 +69,7 @@ function GameBoard({
       <BoardContainer rows={board.length}>
         {board.map((row, rowIndex) => (
           <Row key={rowIndex}>
-            {row.map((tile, colIndex) => {
+            {row.map((_, colIndex) => {
               const rowScore = scores[rowIndex];
               return (
                 <TileContainer

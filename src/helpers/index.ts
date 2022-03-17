@@ -1,7 +1,7 @@
 import type {
   BoardState,
   KeyboardType,
-  Tile,
+  Scores,
 } from '../types';
 
 const gameStatus = {
@@ -81,6 +81,12 @@ export function mapScores(
   return listToKeyboardRows(mapToList(nextLetterMap));
 }
 
+const scoreToNumRank: Record<string, number> = {
+  absent: -1,
+  present: 0,
+  correct: 1,
+}
+
 export function mapKeyboardScores(
   keyboard: KeyboardType,
   letters: string,
@@ -90,10 +96,13 @@ export function mapKeyboardScores(
 
   for (const i in score) {
     const letter = letters[i];
+    const nextScore = score[i];
+
     if (scoreMap.has(letter)) {
-      const value = scoreMap.get(letter);
-      if (value && score[i] > value) {
-        scoreMap.set(letter, score[i]);
+      const prevScore = scoreMap.get(letter);
+
+      if (scoreToNumRank[nextScore] > scoreToNumRank[prevScore!]) {
+        scoreMap.set(letter, nextScore);
       }
     } else {
       scoreMap.set(letter, score[i]);
@@ -141,15 +150,18 @@ export function orderListBy(list: MappedList, orderingList: number[]): Record<an
   return ordered;
 }
 
-export function createGameBoard(): Tile[][] {
-  return [...Array(6)]
-    .map(_ => Array(5)
-      .fill({
-        char: null,
-        score: null,
-      })
-    );
-};
+export const createBoard = (): null[][] => [...Array(6)]
+  .map(_ => (
+    Array(5)
+      .fill(null)
+  ));
+
+export const initBoardState = (): BoardState => [...Array(6).fill('')];
+export const initScores = (): Scores => [...Array(6)]
+  .map(_ => (
+    Array(5)
+      .fill(null)
+  ));
 
 export function isAlphabetChar(str: string): boolean {
   return /^[a-zA-Z]{1}$/.test(str);
@@ -170,27 +182,4 @@ export function getGameStatus(
     status = gameStatus.LOSE;
   }
   return status;
-}
-
-export function getEndState(
-  score: number[],
-  numWords: number,
-  maxWords: number,
-  maxLen: number,
-  wordOfTheDay: string,
-) {
-  if (totalScore(score) === maxLen) {
-    // TODO: what to return here
-    return 'Congratulations on guessing today\'s word!';
-  } else if (numWords === maxWords) {
-    return wordOfTheDay;
-  }
-  return null;
-}
-
-export function totalScore(score: number[]) {
-  return score
-    .reduce((acc, curr) =>
-      acc += curr
-    );
 }

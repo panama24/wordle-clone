@@ -22,9 +22,9 @@ import { asyncDispatch } from './reducers';
 
 const WORD_URL = 'https://api.frontendeval.com/fake/word';
 
-// TODO: save previously SUBMITTED words in local storage
 // TODO: nav modal (clicking on stats), game modal (win or lose modal)
 // winning word animation and toast that says: splendid, fantastic or whew (guess on last try)
+// todo: add tests
 
 function App() {
   const [state, dispatch] = usePersistReducer();
